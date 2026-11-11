@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17212b">
+<title>WCounter</title>
+<style>
+:root{color-scheme:dark;--bg:#101820;--panel:#1b2833;--panel2:#243442;--text:#f2f5f7;--muted:#a9b7c2;--accent:#63d69b}
+*{box-sizing:border-box}
+/* Ensure inactive navigation panels are fully removed from layout. */
+[hidden]{display:none!important}
+html{min-width:280px;min-height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;min-width:280px;min-height:100vh;background:var(--bg);color:var(--text);font:clamp(14px,1.6vw,17px)/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{width:100%;max-width:1100px;margin:0 auto;padding:clamp(12px,3vw,28px) clamp(10px,3vw,24px) calc(28px + env(safe-area-inset-bottom))}
+header{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;margin-bottom:clamp(14px,2.5vw,22px)}
+h1{font-size:clamp(19px,3.2vw,28px);line-height:1.2;margin:0;overflow-wrap:anywhere}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.summary{background:var(--panel);border-radius:clamp(12px,2vw,18px);padding:clamp(13px,2.5vw,20px);margin-bottom:clamp(14px,2.5vw,22px)}
+.summary-title{font-size:14px;color:var(--muted);font-weight:650;margin-bottom:10px}
+.summary-rows{display:flex;flex-direction:column;gap:7px;min-width:0}
+.summary-row{display:block;font-size:clamp(14px,1.8vw,17px);line-height:1.45;overflow-wrap:anywhere}
+.summary-row .summary-name{font-weight:600}.summary-row .summary-count{font-variant-numeric:tabular-nums;white-space:nowrap}
+.summary-empty{color:var(--muted);font-size:14px;padding:3px 0 6px}.summary-line{height:1px;background:#71818c;margin:13px 0 10px}
+.summary-total{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700}.summary-total strong{font-size:clamp(22px,3.5vw,29px);font-variant-numeric:tabular-nums;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:clamp(9px,1.8vw,14px)}
+.tile{min-width:0;background:var(--panel);border:1px solid #304452;border-radius:16px;padding:clamp(11px,2vw,16px);min-height:clamp(130px,18vw,158px);display:flex;flex-direction:column;gap:10px}
+.tile-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}.name{min-width:0;font-size:clamp(21px,3vw,27px);font-weight:700;overflow-wrap:anywhere;line-height:1.15}.count{font-size:clamp(24px,3.2vw,30px);font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums;text-align:center}
+.plus{border:0;border-radius:12px;background:var(--accent);color:#10231a;font-size:clamp(18px,2.3vw,21px);font-weight:800;min-height:48px;width:100%;touch-action:manipulation}
+.small-actions{display:flex;gap:8px}.small-actions button{flex:1}
+button{font:inherit;cursor:pointer;touch-action:manipulation}.secondary{border:1px solid #405463;background:var(--panel2);color:var(--text);border-radius:10px;padding:9px 11px;min-height:42px;max-width:100%}
+.toolbar{display:flex;flex-wrap:wrap;gap:9px;margin:16px 0}.toolbar button{flex:0 1 auto;min-height:44px}
+.section{margin-top:26px}.section h2{font-size:18px;margin:0 0 10px}
+.history-item{background:var(--panel);border-radius:12px;padding:12px 14px;margin:8px 0;min-width:0}.history-head{display:flex;justify-content:space-between;gap:10px;font-weight:650;align-items:center;flex-wrap:wrap}.history-head-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.history-delete{min-height:32px;padding:4px 9px;font-size:13px;line-height:1.2;color:#ffaaaa;border-color:#744848;white-space:nowrap}.history-detail{font-size:13px;color:var(--muted);margin-top:6px;white-space:pre-wrap;overflow-wrap:anywhere}
+.empty{color:var(--muted);font-size:14px;padding:12px 2px}.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:18px}
+.action-dialog{width:min(92vw,390px);max-width:calc(100vw - 24px);border:1px solid #405463;border-radius:18px;background:var(--panel);color:var(--text);padding:clamp(14px,4vw,20px)}.action-dialog::backdrop{background:#000a}.action-dialog h2{font-size:21px;margin:0 0 16px}.action-dialog button{display:block;width:100%;text-align:left;margin-top:10px;padding:13px 14px}.action-dialog .delete-action{color:#ffaaaa;border-color:#744848}.action-dialog .cancel-action{text-align:center}
+@media(max-width:420px){main{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.tile{min-height:128px;padding:10px;border-radius:13px}.name{font-size:clamp(18px,5.5vw,23px)}.count{font-size:24px}.secondary{padding:8px 9px}.toolbar button{flex:1 1 145px}}
+@media(max-width:330px){.grid{grid-template-columns:1fr}.tile{min-height:124px}.history-head-right{width:100%;justify-content:space-between}}
+@media(orientation:landscape) and (max-height:520px){main{padding-top:10px}.tile{min-height:116px}.summary{margin-bottom:12px}.section{margin-top:16px}}
+
+/* v17: fixed viewport; only the app content scrolls when it exceeds the screen */
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+body {
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+}
+main {
+  width: 100%;
+  max-width: 1100px;
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding-top: max(clamp(10px, 2.5vw, 24px), env(safe-area-inset-top));
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-right: max(10px, env(safe-area-inset-right));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+header, .summary, .toolbar { flex: 0 0 auto; }
+header { margin-bottom: clamp(10px, 1.8vh, 18px); }
+.summary {
+  flex: 0 0 auto;
+  margin-bottom: clamp(10px, 1.8vh, 18px);
+  padding: clamp(10px, 1.8vh, 18px);
+}
+.summary-rows { gap: clamp(3px, .65vh, 7px); }
+.summary-row { font-size: clamp(12px, 1.8vh, 16px); line-height: 1.3; }
+.summary-line { margin: clamp(7px, 1.2vh, 13px) 0; }
+.grid {
+  flex: 0 0 auto;
+  min-height: 0;
+  grid-auto-rows: auto;
+  align-content: start;
+  overflow: visible;
+}
+.tile {
+  height: auto;
+  min-height: 220px;
+  padding: clamp(8px, 1.4vh, 15px);
+  gap: clamp(7px, 1vh, 10px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tile-top, .tile .count, .tile .plus, .tile .small-actions { flex: 0 0 auto; }
+.tile .secondary { min-height: 42px; }
+.plus { min-height: 54px; }
+.small-actions { display: flex; }
+.small-actions button { min-height: 42px; }
+.toolbar { margin: clamp(9px, 1.7vh, 16px) 0 0; gap: 9px; }
+.toolbar button { min-height: 46px; }
+.section { flex: 0 0 auto; margin-top: 20px; }
+@media (max-width: 420px) {
+  main { padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(7px, 1.3vh, 10px); }
+  .tile { min-height: 220px; padding: clamp(8px, 1.3vh, 11px); border-radius: 13px; }
+  .name { font-size: clamp(18px, 5.5vw, 23px); }
+  .count { font-size: clamp(22px, 6vw, 27px); }
+  .toolbar button { flex: 1 1 145px; }
+}
+@media (max-width: 330px) {
+  .grid { grid-template-columns: 1fr; }
+  .tile { min-height: 205px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  main { padding-top: max(5px, env(safe-area-inset-top)); padding-bottom: max(5px, env(safe-area-inset-bottom)); }
+  header { margin-bottom: 6px; }
+  h1 { font-size: 18px; }
+  .summary { padding: 7px 10px; margin-bottom: 7px; }
+  .summary-row { font-size: 12px; }
+  .summary-rows { gap: 1px; }
+  .summary-line { margin: 4px 0; }
+  .tile { min-height: 190px; padding: 6px; gap: 4px; }
+  .name { font-size: 18px; }
+  .count { font-size: 20px; }
+  .plus { min-height: 34px; }
+  .tile .secondary, .small-actions button { min-height: 30px; }
+  .toolbar { margin-top: 6px; }
+  .toolbar button { min-height: 34px; }
+}
+
+/* v18: use remaining viewport height for cards when they fit; preserve natural height when they do not */
+main { display:flex; flex-direction:column; }
+.grid {
+  flex: 1 0 auto;
+  min-height: 0;
+  grid-auto-rows: minmax(220px, 1fr);
+  align-content: stretch;
+  overflow: visible;
+}
+.tile { height:100%; min-height:220px; }
+@media (max-width:420px) { .tile { min-height:220px; } }
+@media (max-width:330px) { .tile { min-height:205px; } }
+@media (orientation:landscape) and (max-height:520px) { .tile { min-height:190px; } }
+
+
+/* v19: one or two cards keep their standard card height; 3+ cards may fill the available area */
+#grid[data-count="0"],
+#grid[data-count="1"],
+#grid[data-count="2"] {
+  flex: 0 0 auto;
+  grid-auto-rows: 220px;
+  align-content: start;
+}
+#grid[data-count="1"] .tile,
+#grid[data-count="2"] .tile {
+  height: 220px;
+  min-height: 220px;
+}
+@media (max-width:330px) {
+  #grid[data-count="1"] .tile,
+  #grid[data-count="2"] .tile {
+    height: 205px;
+    min-height: 205px;
+  }
+}
+@media (orientation:landscape) and (max-height:520px) {
+  #grid[data-count="1"] .tile,
+  #grid[data-count="2"] .tile {
+    height: 190px;
+    min-height: 190px;
+  }
+}
+
+
+/* v20: discreet author credit under the application title */
+.brand-title{display:flex;flex:1 1 auto;flex-direction:column;align-items:flex-start;min-width:0;gap:2px}
+.brand-title h1{font-size:clamp(16px,2.8vw,25px)}
+.creator-credit{font-size:11px;line-height:1.25;color:var(--muted);font-weight:400;letter-spacing:.02em}
+
+
+.header-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.stats-periods{display:flex;flex-wrap:nowrap;gap:6px;margin:10px 0}
+.stats-periods button{flex:1 1 0;min-width:0;min-height:40px;padding:8px 5px;font-size:clamp(11px,2.8vw,14px);white-space:nowrap}
+.stats-periods button.active{background:var(--accent);color:#10231a;border-color:var(--accent);font-weight:750}
+.stats-range{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.stats-range label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:13px}
+.stats-range input{width:100%;min-width:0;min-height:42px;border:1px solid #405463;border-radius:10px;background:var(--panel2);color:var(--text);padding:7px;font:inherit;color-scheme:dark}
+.stats-range button{grid-column:1/-1}
+.stats-card{background:var(--panel);border-radius:14px;padding:15px;margin:12px 0 18px}
+.stats-chart-card{background:var(--panel);border-radius:14px;padding:14px 12px;margin:12px 0 18px}
+.stats-chart-title{font-size:15px;font-weight:700;margin:0 0 8px}
+.stats-chart-wrap{width:100%;overflow:hidden}
+#statsChart{display:block;width:100%;height:auto;min-height:150px}
+.chart-grid{stroke:var(--muted);stroke-opacity:.22;stroke-width:1;stroke-dasharray:3 4}
+.chart-line{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.chart-point{fill:var(--accent);stroke:var(--panel);stroke-width:2}
+.chart-label{fill:var(--muted);font-size:11px}
+.chart-empty{color:var(--muted);font-size:13px;padding:24px 4px;text-align:center}
+.stats-view-switch{display:flex;gap:7px;margin:12px 0}
+.stats-view-switch button{flex:1;min-height:40px}
+.stats-view-switch button.active{background:var(--accent);color:#10231a;border-color:var(--accent);font-weight:750}
+.stats-legend{display:flex;align-items:stretch;gap:8px;margin:10px 2px 2px;font-size:12px;color:var(--muted)}
+.stats-legend-forms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;flex:1;min-width:0}
+.stats-legend-total{flex:0 0 76px;min-height:80px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;padding:8px 5px;border-radius:12px}
+.stats-legend-total .stats-legend-line{width:25px;height:4px}
+@media(max-width:360px){.stats-legend-total{flex-basis:66px}.stats-legend-forms{gap:6px}.stats-legend-item{padding:7px 8px}}
+.stats-legend-item{display:inline-flex;align-items:center;gap:6px;border:1px solid #405463;background:var(--panel2);color:var(--text);border-radius:999px;padding:7px 11px;min-height:36px;font:inherit;font-size:12px;cursor:pointer}.stats-legend-item.active{border-color:var(--accent);background:var(--accent);color:#10231a;font-weight:750}.stats-legend-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stats-legend-line{width:18px;height:3px;border-radius:4px;display:inline-block}
+.chart-line{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.chart-point{stroke:var(--panel);stroke-width:2}
+.stats-label,.stats-sessions{color:var(--muted);font-size:13px}
+.stats-total{font-size:clamp(28px,6vw,36px);font-weight:800;font-variant-numeric:tabular-nums;margin:3px 0}
+#statsSection h3{font-size:16px;margin:16px 0 9px}
+.stat-row{margin:10px 0}
+.stat-row-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:5px;font-variant-numeric:tabular-nums}
+.stat-track{height:9px;background:var(--panel2);border-radius:99px;overflow:hidden}
+.stat-fill{height:100%;background:var(--accent);border-radius:99px}
+@media(max-width:420px){header{gap:6px}.app-tabs{flex-basis:61%;gap:3px;padding:0 2px}.app-tab{font-size:clamp(10px,2.8vw,12px);padding:7px 3px 6px;min-height:37px}.brand-title h1{font-size:clamp(14px,4vw,18px)}.creator-credit{font-size:9px}.header-actions{gap:5px}.header-actions button{padding:8px}.stats-range{grid-template-columns:1fr 1fr}}
+
+
+/* v37: Chrome-style navigation tabs; keep the existing application palette */
+.app-tabs{display:flex;flex:0 1 58%;align-items:flex-end;justify-content:flex-end;gap:4px;min-width:0;border-bottom:0;padding:0 4px;}
+header{position:relative}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;border-bottom:1px solid #405463;pointer-events:none}
+.app-tab{flex:1 1 0;min-width:0;min-height:40px;padding:8px 6px 7px;border:1px solid #405463;border-bottom:0;border-radius:11px 11px 0 0;background:var(--panel2);color:var(--muted);font:inherit;font-size:clamp(12px,3.2vw,15px);font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app-tab.active{position:relative;z-index:1;background:var(--panel);color:var(--text);border-color:#405463;box-shadow:0 2px 0 var(--panel);}
+#historySection:not([hidden]),#statsSection:not([hidden]){position:static;width:100%;height:auto;max-width:none;margin:0;padding:0;overflow:visible;background:transparent;}
+.stats-modal-header,.history-modal-header{display:none}
+.stats-modal-header h2,.history-modal-header h2{margin:0;font-size:20px}
+#statsClose,#historyClose{display:none}
+
+
+/* v42: keep the active tab fill above the shared header underline */
+.app-tab.active{
+  box-shadow:none !important;
+  margin-bottom:0 !important;
+  transform:none !important;
+}
+header::after{
+  z-index:3;
+}
+
+/* v44: let the active-tab gradient cover the shared underline so it blends into the page */
+.app-tab.active{
+  z-index:4;
+  background:linear-gradient(to bottom, var(--panel) 0%, var(--panel) 42%, var(--bg) 100%);
+  border-bottom-color:transparent;
+}
+
+/* v56: slightly acid green plus flash; reliable per-card minus flash cleanup */
+*, *::before, *::after { -webkit-tap-highlight-color: transparent; }
+button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+button:focus:not(:focus-visible), a:focus:not(:focus-visible), [role="button"]:focus:not(:focus-visible) { outline: none; }
+@keyframes wcounterTapFeedback {
+  0% { filter: brightness(1); transform: scale(1); box-shadow: inset 0 0 0 0 rgba(255,255,255,0); }
+  24% { filter: brightness(1.55); transform: scale(.93); box-shadow: inset 0 0 0 2px rgba(255,255,255,.34), 0 0 0 1px rgba(255,255,255,.12); }
+  100% { filter: brightness(1); transform: scale(1); box-shadow: inset 0 0 0 0 rgba(255,255,255,0); }
+}
+.tap-feedback { animation: wcounterTapFeedback .26s ease-out both; }
+@keyframes wcounterPlusFlash {
+  0% { background: var(--accent); color: #10231a; box-shadow: 0 0 0 0 rgba(51,204,51,0); }
+  20% { background: #33cc33; color: #10231a; box-shadow: 0 0 0 2px rgba(51,204,51,.42), 0 0 8px rgba(51,204,51,.58); }
+  100% { background: var(--accent); color: #10231a; box-shadow: 0 0 0 0 rgba(51,204,51,0); }
+}
+@keyframes wcounterMinusFlash {
+  0% { background: #E04444; color: #fff; box-shadow: 0 0 0 2px rgba(224,68,68,.38), 0 0 8px rgba(224,68,68,.52); }
+  100% { background: var(--panel2); color: inherit; box-shadow: 0 0 0 0 rgba(224,68,68,0); }
+}
+.plus.plus-flash { animation-duration: .115s; animation-timing-function: ease-out; animation-fill-mode: both; }
+.secondary.minus-flash { animation-duration: .18s; animation-timing-function: ease-out; animation-fill-mode: both; }
+.plus.plus-flash { animation-name: wcounterPlusFlash; }
+.secondary.minus-flash { animation-name: wcounterMinusFlash; }
+.app-tab.tap-feedback { border-radius: 11px 11px 0 0; }
+
+
+/* Fallback for keyboard activation and while a pointer is held */
+button:active, a:active, [role="button"]:active { filter: brightness(1.35); }
+
+/* v64: matching whole-card flash on counter changes */
+@keyframes wcounterCardPlusFlash {
+  0%, 100% { background: var(--panel); }
+  20% { background: rgba(51,204,51,.22); }
+}
+@keyframes wcounterCardMinusFlash {
+  0%, 100% { background: var(--panel); }
+  20% { background: rgba(224,68,68,.22); }
+}
+.tile.card-plus-flash { animation: wcounterCardPlusFlash .115s ease-out both; }
+.tile.card-minus-flash { animation: wcounterCardMinusFlash .18s ease-out both; }
+
+</style>
+<link rel="manifest" href="./manifest.webmanifest">
+</head>
+<body>
+<main id="appMain">
+<header><div class="brand-title"><h1 id="pageTitle">Počítadlo</h1><div class="creator-credit">Created by Oleksandr Nedbailo</div></div><nav class="app-tabs" aria-label="Hlavná navigácia"><button class="app-tab active" id="counterTab" type="button" aria-selected="true">Počet</button><button class="app-tab" id="historyToggle" type="button" aria-selected="false">História</button><button class="app-tab" id="statsToggle" type="button" aria-selected="false">Štatistika</button></nav></header>
+<section class="summary">
+  
+  <div id="summaryRows" class="summary-rows"></div>
+  <div class="summary-line"></div>
+  <div class="summary-total"><span>Spolu</span><strong id="total">0 ks</strong></div>
+</section>
+<section class="grid" id="grid"></section>
+<div class="toolbar">
+<button class="secondary" id="add">＋ Pridať W</button>
+<button class="secondary" id="finish">Ukončiť zmenu</button>
+</div>
+<section class="section" id="historySection" hidden><div class="history-modal-header"><h2>História zmien · 365 dní</h2><button class="secondary" id="historyClose" type="button">✕ Zavrieť</button></div><div id="history"></div></section>
+<section class="section" id="statsSection" hidden>
+  <div class="stats-modal-header"><h2>Štatistika</h2><button class="secondary" id="statsClose" type="button">✕ Zavrieť</button></div>
+  <div class="stats-periods">
+    <button class="secondary stat-preset active" data-period="today">Dnes</button>
+    <button class="secondary stat-preset" data-period="7">Týždeň</button>
+    <button class="secondary stat-preset" data-period="month">Mesiac</button>
+    <button class="secondary stat-preset" data-period="3months">3 mesiace</button>
+    <button class="secondary stat-preset" data-period="year">Rok</button>
+  </div>
+  <div class="stats-range">
+    <label>Od <input type="date" id="statsFrom"></label>
+    <label>Do <input type="date" id="statsTo"></label>
+  </div>
+  <div class="stats-card">
+    <div class="stats-label" id="statsPeriodLabel">Dnes</div>
+    <div class="stats-total" id="statsTotal">0 ks</div>
+    <div class="stats-sessions" id="statsSessions">Ukončené zmeny: 0</div>
+  </div>
+  <div class="stats-chart-card" id="statsChartCard" hidden>
+    <div class="stats-chart-title">Vývoj nepodarkov podľa dní</div>
+    <div class="stats-chart-wrap" id="statsChartWrap"><svg id="statsChart" viewBox="0 0 600 220" role="img" aria-label="Graf celkového počtu nepodarkov a počtu podľa foriem"></svg></div>
+    <div class="stats-legend" id="statsLegend"></div>
+  </div>
+  <div id="statsOverview"><h3>Podľa foriem</h3><div id="statsForms"></div></div>
+  <div class="empty" id="statsEmpty" hidden>Za vybrané obdobie nie sú uložené žiadne záznamy.</div>
+  <div class="stats-view-switch" aria-label="Zobrazenie štatistiky">
+    <button class="secondary active" id="statsOverviewBtn" type="button">Prehľad</button>
+    <button class="secondary" id="statsGraphBtn" type="button">Graf</button>
+  </div>
+</section>
+<dialog class="action-dialog" id="formActions">
+  <h2 id="actionTitle">Nastavenia W</h2>
+  <button class="secondary" id="renameAction">Premenovať</button>
+  <button class="secondary delete-action" id="deleteAction">Odstrániť</button>
+  <button class="secondary cancel-action" id="cancelAction">Zrušiť</button>
+</dialog>
+</main>
+<script>
+const KEY='brakcounter_v1';
+const $=id=>document.getElementById(id);
+const today=()=>new Date().toLocaleString('sk-SK',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+let data;
+function fresh(){return {forms:[],history:[],started:today()}}
+function sortForms(){data.forms.sort((a,b)=>String(a.name).localeCompare(String(b.name),'sk',{numeric:true,sensitivity:'base'}))}
+function nextDefaultName(){
+ const used=new Set(data.forms.map(f=>String(f.name).trim().toUpperCase()));
+ let n=1;
+ while(used.has('W'+n))n++;
+ return 'W'+n;
+}
+function load(){try{data=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){data=fresh()}if(!Array.isArray(data.forms))data.forms=[];if(!Array.isArray(data.history))data.history=[];data.history=data.history.filter(x=>Date.now()-x.time<365*86400000);sortForms();save()}
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+
+
+
+let beepContext=null;
+function playCounterBeep(kind){
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtx)return;
+  if(!beepContext)beepContext=new AudioCtx();
+  const ctx=beepContext;
+  if(ctx.state==="suspended")ctx.resume();
+  const now=ctx.currentTime;
+  function pulse(freq1,freq2,offset,duration,peak){
+   const osc=ctx.createOscillator();
+   const gain=ctx.createGain();
+   osc.type="square";
+   osc.frequency.setValueAtTime(freq1,now+offset);
+   if(freq2)osc.frequency.exponentialRampToValueAtTime(freq2,now+offset+duration);
+   gain.gain.setValueAtTime(0.0001,now+offset);
+   gain.gain.exponentialRampToValueAtTime(peak,now+offset+0.003);
+   gain.gain.setValueAtTime(peak,now+offset+duration*0.68);
+   gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+duration);
+   osc.connect(gain);
+   gain.connect(ctx.destination);
+   osc.start(now+offset);
+   osc.stop(now+offset+duration+0.004);
+  }
+  if(kind==="plus"){
+   // Option 3: bright, piercing ascending confirmation tone.
+   pulse(1750,2200,0,0.115,1.0);
+  }else{
+   // Restored double chirp from the approved v23 minus sound, at full gain.
+   pulse(1450,1650,0,0.075,1.0);
+   pulse(1650,1450,0.105,0.075,1.0);
+  }
+ }catch(e){/* Sound is optional; counting must always work. */}
+}
+
+function total(){return data.forms.reduce((s,f)=>s+f.count,0)}
+function render(){
+ $('grid').innerHTML='';
+ $('grid').dataset.count=String(data.forms.length);
+ data.forms.forEach((f,i)=>{
+  const card=document.createElement('article');card.className='tile';
+  const top=document.createElement('div');top.className='tile-top';
+  const name=document.createElement('div');name.className='name';name.textContent=f.name;
+  const edit=document.createElement('button');edit.className='secondary';edit.textContent='⋯';edit.setAttribute('aria-label','Nastavenia W');edit.onclick=()=>menu(i);
+  top.append(name,edit);
+  const count=document.createElement('div');count.className='count';count.textContent=f.count;
+  const plus=document.createElement('button');plus.className='plus';plus.textContent='+ 1';plus.setAttribute('aria-label','Pridať jeden nepodarok');plus.onclick=()=>{playCounterBeep('plus');f.count++;save();render();const tile=$('grid').children[i];const flashed=tile?.querySelector('.plus');if(flashed){flashed.classList.remove('plus-flash');void flashed.offsetWidth;flashed.classList.add('plus-flash')}if(tile){tile.classList.remove('card-plus-flash','card-minus-flash');void tile.offsetWidth;tile.classList.add('card-plus-flash')}};
+  const actions=document.createElement('div');actions.className='small-actions';
+  const minus=document.createElement('button');minus.className='secondary';minus.textContent='− 1';minus.disabled=f.count===0;minus.onclick=()=>{if(f.count>0){playCounterBeep('minus');f.count--;save();render();const tile=$('grid').children[i];const flashed=tile?.querySelector('.small-actions button');if(flashed){flashed.classList.remove('minus-flash');void flashed.offsetWidth;flashed.classList.add('minus-flash')}if(tile){tile.classList.remove('card-plus-flash','card-minus-flash');void tile.offsetWidth;tile.classList.add('card-minus-flash')}}};
+  actions.append(minus);card.append(top,count,plus,actions);$('grid').append(card);
+ });
+ $('total').textContent=total()+' ks';
+ const summary=$('summaryRows');summary.innerHTML='';
+ if(data.forms.length===0){const empty=document.createElement('div');empty.className='summary-empty';empty.textContent='Zatiaľ nie sú pridané žiadne W.';summary.append(empty)}
+ data.forms.forEach(f=>{const row=document.createElement('div');row.className='summary-row';const n=document.createElement('span');n.className='summary-name';n.textContent=f.name;const c=document.createElement('span');c.className='summary-count';c.textContent=' – '+f.count+' ks';row.append(n,c);summary.append(row)});
+ renderHistory();
+}
+let selectedFormIndex=null;
+function menu(i){
+ selectedFormIndex=i;
+ $('actionTitle').textContent=data.forms[i].name;
+ $('formActions').showModal();
+}
+$('cancelAction').onclick=()=> $('formActions').close();
+$('renameAction').onclick=()=>{
+ const f=data.forms[selectedFormIndex];
+ if(!f)return;
+ $('formActions').close();
+ const n=prompt('Nové označenie:',f.name);
+ if(n&&n.trim()){f.name=n.trim();sortForms();save();render()}
+};
+$('deleteAction').onclick=()=>{
+ const i=selectedFormIndex;
+ const f=data.forms[i];
+ if(!f)return;
+ $('formActions').close();
+ if(confirm('Odstrániť '+f.name+'? Aktuálny počet sa stratí.')){
+  data.forms.splice(i,1);save();render();
+ }
+};
+$('add').onclick=()=>{const n=prompt('Zadajte označenie:', nextDefaultName());if(n&&n.trim()){data.forms.push({name:n.trim(),count:0});sortForms();save();render()}};
+$('finish').onclick=()=>{
+ if(data.forms.length===0){alert('Najprv pridajte aspoň jedno W.');return}
+ if(!confirm('Ukončiť zmenu a uložiť výsledky? Počítadlá sa vynulujú pre ďalšiu zmenu.'))return;
+ data.history.unshift({time:Date.now(),date:today(),total:total(),forms:data.forms.map(f=>({name:f.name,count:f.count}))});
+ data.history=data.history.filter(x=>Date.now()-x.time<365*86400000);
+ data.forms=data.forms.map(f=>({...f,count:0}));data.started=today();save();render();
+};
+function setAppView(view){
+ const counter=view==='counter',history=view==='history',stats=view==='stats';
+ $('pageTitle').textContent=counter?'Počítadlo':history?'História':'Štatistika';
+ $('summaryRows').closest('.summary').hidden=!counter;
+ $('grid').hidden=!counter;
+ document.querySelector('.toolbar').hidden=!counter;
+ $('historySection').hidden=!history;
+ $('statsSection').hidden=!stats;
+ $('counterTab').classList.toggle('active',counter);$('counterTab').setAttribute('aria-selected',String(counter));
+ $('historyToggle').classList.toggle('active',history);$('historyToggle').setAttribute('aria-selected',String(history));
+ $('statsToggle').classList.toggle('active',stats);$('statsToggle').setAttribute('aria-selected',String(stats));
+ if(history)renderHistory();
+ if(stats){setStatsView('overview');setStatsPreset('today');}
+ $('appMain').scrollTop=0;
+}
+$('counterTab').onclick=()=>setAppView('counter');
+$('historyToggle').onclick=()=>setAppView('history');
+
+let statsSelection={from:null,to:null,label:'Dnes'};
+let statsView='overview';
+let selectedChartSeries=new Set(['Spolu']);
+function setStatsView(view){
+ statsView=view;
+ $('statsOverview').hidden=view!=='overview';
+ $('statsChartCard').hidden=view!=='graph';
+ $('statsOverviewBtn').classList.toggle('active',view==='overview');
+ $('statsGraphBtn').classList.toggle('active',view==='graph');
+}
+$('statsOverviewBtn').onclick=()=>setStatsView('overview');
+$('statsGraphBtn').onclick=()=>setStatsView('graph');
+function localDateInput(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
+function dateAtStart(value){const [y,m,d]=value.split('-').map(Number);return new Date(y,m-1,d,0,0,0,0).getTime()}
+function dateAtEnd(value){const [y,m,d]=value.split('-').map(Number);return new Date(y,m-1,d,23,59,59,999).getTime()}
+function setStatsPreset(period){
+ const now=new Date(),todayStr=localDateInput(now);let from,to=todayStr,label;
+ if(period==='today'){from=to=todayStr;label='Dnes'}
+ else if(period==='7'){const d=new Date(now);d.setDate(d.getDate()-6);from=localDateInput(d);label='Týždeň'}
+ else if(period==='month'){from=localDateInput(new Date(now.getFullYear(),now.getMonth(),1));label='Tento mesiac'}
+ else if(period==='3months'){const d=new Date(now.getFullYear(),now.getMonth()-2,1);from=localDateInput(d);label='Posledné 3 mesiace'}
+ else {const d=new Date(now);d.setDate(d.getDate()-364);from=localDateInput(d);label='Posledných 365 dní'}
+ statsSelection={from,to,label};$('statsFrom').value=from;$('statsTo').value=to;$('statsPeriodLabel').textContent=label;
+ document.querySelectorAll('.stat-preset').forEach(b=>b.classList.toggle('active',b.dataset.period===period));renderStats();
+}
+document.querySelectorAll('.stat-preset').forEach(b=>b.onclick=()=>setStatsPreset(b.dataset.period));
+function applyStatsRange(){
+ const from=$('statsFrom').value,to=$('statsTo').value;
+ if(!from||!to)return;
+ if(from>to){$('statsPeriodLabel').textContent='Skontrolujte rozsah dátumov';return}
+ statsSelection={from,to,label:`${new Date(dateAtStart(from)).toLocaleDateString('sk-SK')} – ${new Date(dateAtStart(to)).toLocaleDateString('sk-SK')}`};
+ $('statsPeriodLabel').textContent=statsSelection.label;
+ document.querySelectorAll('.stat-preset').forEach(b=>b.classList.remove('active'));
+ renderStats();
+}
+$('statsFrom').addEventListener('change',applyStatsRange);
+$('statsTo').addEventListener('change',applyStatsRange);
+$('statsToggle').onclick=()=>setAppView('stats');
+function renderStats(){
+ const from=dateAtStart(statsSelection.from),to=dateAtEnd(statsSelection.to);
+ const entries=data.history.filter(h=>h.time>=from&&h.time<=to);
+ const counts={};let sum=0;
+ entries.forEach(h=>(h.forms||[]).forEach(f=>{const n=Number(f.count)||0;counts[f.name]=(counts[f.name]||0)+n;sum+=n}));
+ $('statsTotal').textContent=sum+' ks';$('statsSessions').textContent='Ukončené zmeny: '+entries.length;
+ renderStatsChart(entries,from,to);
+ const root=$('statsForms');root.innerHTML='';$('statsEmpty').hidden=entries.length>0;
+ const names=Object.keys(counts).sort((a,b)=>a.localeCompare(b,'sk',{numeric:true,sensitivity:'base'}));
+ const max=Math.max(1,...names.map(n=>counts[n]));
+ names.forEach(name=>{const row=document.createElement('div');row.className='stat-row';const head=document.createElement('div');head.className='stat-row-head';const label=document.createElement('strong');label.textContent=name;const value=document.createElement('span');value.textContent=counts[name]+' ks';head.append(label,value);const track=document.createElement('div');track.className='stat-track';const fill=document.createElement('div');fill.className='stat-fill';fill.style.width=(counts[name]/max*100)+'%';track.append(fill);row.append(head,track);root.append(row)});
+}
+function toggleChartSeries(name,series,entries,from,to){
+ if(selectedChartSeries===null){selectedChartSeries=new Set(series.map(s=>s.name));}
+ if(selectedChartSeries.has(name))selectedChartSeries.delete(name);else selectedChartSeries.add(name);
+ if(selectedChartSeries.size===series.length)selectedChartSeries=null;
+ renderStatsChart(entries,from,to);
+}
+function renderStatsChart(entries,from,to){
+ const svg=$('statsChart'),ns='http://www.w3.org/2000/svg',legend=$('statsLegend');
+ svg.innerHTML='';legend.innerHTML='';
+ const start=new Date(from),end=new Date(to),days=Math.max(1,Math.round((end-start)/86400000)+1);
+ const dailyTotal=new Map(),dailyForms=new Map(),formNames=new Set();
+ entries.forEach(h=>{
+  const key=localDateInput(new Date(h.time));let total=0;
+  (h.forms||[]).forEach(f=>{
+   const name=String(f.name||'');const value=Number(f.count)||0;
+   formNames.add(name);total+=value;
+   if(!dailyForms.has(name))dailyForms.set(name,new Map());
+   const map=dailyForms.get(name);map.set(key,(map.get(key)||0)+value);
+  });
+  dailyTotal.set(key,(dailyTotal.get(key)||0)+total);
+ });
+ const dates=[];
+ for(let i=0;i<days;i++){const d=new Date(start);d.setDate(d.getDate()+i);dates.push({date:d,key:localDateInput(d)});}
+ const names=[...formNames].sort((a,b)=>a.localeCompare(b,'sk',{numeric:true,sensitivity:'base'}));
+ const palette=['#55b8ff','#ffad55','#8bd17c','#d58bff','#ff7f91','#55d6c2','#e5cf63','#9ba8ff','#d49b78','#70c7d4'];
+ const series=[{name:'Spolu',color:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#63d69b',values:dates.map(d=>dailyTotal.get(d.key)||0),total:true},...names.map((name,i)=>({name,color:palette[i%palette.length],values:dates.map(d=>dailyForms.get(name)?.get(d.key)||0)}))];
+ const W=600,H=220,left=42,right=14,top=14,bottom=34,plotW=W-left-right,plotH=H-top-bottom;
+ const visibleSeries=selectedChartSeries===null?series:series.filter(s=>selectedChartSeries.has(s.name));
+ const maxValue=Math.max(1,...visibleSeries.flatMap(s=>s.values));
+ const niceMax=maxValue<=5?5:Math.ceil(maxValue/5)*5;
+ const x=i=>left+(dates.length===1?plotW/2:i/(dates.length-1)*plotW);
+ const y=v=>top+plotH-(v/niceMax)*plotH;
+ const make=(tag,attrs,parent=svg)=>{const el=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));parent.append(el);return el};
+ for(let i=0;i<=4;i++){
+  const val=niceMax*i/4,yy=y(val);
+  make('line',{x1:left,y1:yy,x2:W-right,y2:yy,class:'chart-grid'});
+  const label=make('text',{x:left-8,y:yy+4,'text-anchor':'end',class:'chart-label'});label.textContent=String(Math.round(val));
+ }
+ visibleSeries.forEach((line,si)=>{
+  const coords=line.values.map((v,i)=>`${x(i)},${y(v)}`);
+  const pathAttrs={points:coords.join(' '),class:'chart-line',stroke:line.color,'stroke-width':line.total?4:2.5};
+  if(!line.total)pathAttrs['stroke-opacity']='0.9';
+  if(dates.length>1)make('polyline',pathAttrs);
+  else make('line',{x1:x(0)-12,y1:y(line.values[0]),x2:x(0)+12,y2:y(line.values[0]),...pathAttrs});
+  if(dates.length<=45){line.values.forEach((v,i)=>{const c=make('circle',{cx:x(i),cy:y(v),r:dates.length>20?2.5:3.5,fill:line.color,class:'chart-point'});const title=make('title',{},c);title.textContent=`${line.name} · ${dates[i].date.toLocaleDateString('sk-SK')}: ${v} ks`;});}
+ });
+ const formsLegend=document.createElement('div');formsLegend.className='stats-legend-forms';
+ const totalLine=series[0];
+ const totalItem=document.createElement('button');totalItem.type='button';totalItem.className='stats-legend-item stats-legend-total';
+ totalItem.classList.toggle('active',selectedChartSeries===null||selectedChartSeries.has(totalLine.name));
+ totalItem.setAttribute('aria-pressed',String(selectedChartSeries===null||selectedChartSeries.has(totalLine.name)));
+ totalItem.title='Zobraziť alebo skryť celkovú krivku';
+ const totalSwatch=document.createElement('i');totalSwatch.className='stats-legend-line';totalSwatch.style.background=totalLine.color;
+ const totalLabel=document.createElement('span');totalLabel.textContent=totalLine.name;
+ totalItem.append(totalSwatch,totalLabel);
+ totalItem.onclick=()=>toggleChartSeries(totalLine.name,series,entries,from,to);
+ series.slice(1).forEach(line=>{
+  const item=document.createElement('button');item.type='button';item.className='stats-legend-item';
+  const active=selectedChartSeries===null||selectedChartSeries.has(line.name);
+  item.classList.toggle('active',active);
+  item.setAttribute('aria-pressed',String(active));
+  item.title='Zobraziť alebo skryť krivku '+line.name;
+  const swatch=document.createElement('i');swatch.className='stats-legend-line';swatch.style.background=line.color;
+  const label=document.createElement('span');label.textContent=line.name;
+  item.append(swatch,label);
+  item.onclick=()=>toggleChartSeries(line.name,series,entries,from,to);
+  formsLegend.append(item);
+ });
+ legend.append(formsLegend,totalItem);
+ const labelIndices=[0,Math.floor((dates.length-1)/2),dates.length-1].filter((v,i,a)=>a.indexOf(v)===i);
+ labelIndices.forEach((i,pos)=>{const d=dates[i].date;const t=make('text',{x:x(i),y:H-9,'text-anchor':pos===0?'start':(pos===labelIndices.length-1?'end':'middle'),class:'chart-label'});t.textContent=d.toLocaleDateString('sk-SK',{day:'2-digit',month:'2-digit'});});
+ if(!entries.length){const t=make('text',{x:W/2,y:H/2+5,'text-anchor':'middle',class:'chart-label'});t.textContent='Zatiaľ bez dokončených zmien';}
+}
+function renderHistory(){
+ const root=$('history');root.innerHTML='';
+ if(!data.history.length){root.innerHTML='<div class="empty">Zatiaľ nie sú uložené žiadne ukončené zmeny.</div>';return}
+ data.history.forEach((h,i)=>{
+  const el=document.createElement('div');el.className='history-item';
+  const head=document.createElement('div');head.className='history-head';
+  const d=document.createElement('span');d.textContent=h.date;
+  const right=document.createElement('div');right.className='history-head-right';
+  const t=document.createElement('span');t.textContent='Spolu: '+h.total;
+  const del=document.createElement('button');del.className='secondary history-delete';del.textContent='Odstrániť';
+  del.setAttribute('aria-label','Odstrániť záznam z histórie');
+  del.onclick=()=>{
+   if(confirm('Odstrániť tento záznam z histórie?')){
+    data.history.splice(i,1);save();renderHistory();
+   }
+  };
+  right.append(t,del);head.append(d,right);
+  const detail=document.createElement('div');detail.className='history-detail';
+  detail.textContent=h.forms.map(f=>f.name+': '+f.count).join('\n');
+  el.append(head,detail);root.append(el);
+ });
+}
+// A short tap still gets a complete visible animation, even after the finger is lifted.
+document.addEventListener('pointerdown', function(event) {
+ const control = event.target.closest('button, a, [role="button"]');
+ if (!control || event.button !== 0) return;
+ // The dialog's cancel button can sit under the finger when the card menu opens;
+ // do not trigger tap feedback on it from the pointer-up/click handoff.
+ if (control.id === 'cancelAction') return;
+ control.classList.remove('tap-feedback');
+ void control.offsetWidth; // restart the animation on consecutive quick taps
+ control.classList.add('tap-feedback');
+}, {passive:true});
+document.addEventListener('animationend', function(event) {
+ if (event.animationName === 'wcounterCardPlusFlash') event.target.classList.remove('card-plus-flash');
+ if (event.animationName === 'wcounterCardMinusFlash') event.target.classList.remove('card-minus-flash');
+ if (event.animationName === 'wcounterTapFeedback') event.target.classList.remove('tap-feedback');
+ if (event.animationName === 'wcounterPlusFlash') event.target.classList.remove('plus-flash');
+ if (event.animationName === 'wcounterMinusFlash') event.target.classList.remove('minus-flash');
+});
+
+load();render();setAppView('counter');
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js", {scope: "./"})
+      .catch(function (error) { console.error("WCounter service worker:", error); });
+  });
+}
+</script>
+</body>
+</html>
