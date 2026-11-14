@@ -1,3 +1,4 @@
+
 name: Build WCounter APK from ZIP
 
 on:
@@ -9,13 +10,14 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Extract Android project ZIP
         run: |
-          unzip -q WCounter_Android_v109_APK_Project_v1.0.zip -d extracted
+          unzip -q WCounter_APK_Project_v1.0_REBUILT.zip -d extracted
           test -f extracted/WCounter_Android_Project/app/build.gradle
 
       - name: Set up JDK 17
