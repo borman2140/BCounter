@@ -15,10 +15,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract correct Android project
+      - name: Extract Android project
         run: |
-          unzip -q WCounter_Android_v112_APK_Project_v1.1.zip -d extracted
-          test -f extracted/WCounter_Android_Project/app/build.gradle
+          unzip -q WCounter_Android_v112_APK_Project_v1.1_FIXED.zip -d extracted
           test -f extracted/WCounter_Android_Project/app/src/main/assets/index.html
 
       - name: Set up JDK 17
@@ -43,4 +42,3 @@ jobs:
           path: extracted/WCounter_Android_Project/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
-          
