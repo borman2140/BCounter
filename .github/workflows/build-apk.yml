@@ -17,7 +17,7 @@ jobs:
 
       - name: Extract Android project
         run: |
-          unzip -q WCounter_Android_v112_APK_Project_v1.1_FIXED.zip -d extracted
+          unzip -q WCounter_Android_v112_APK_Project_v1.1_FIXED2.zip -d extracted
           test -f extracted/WCounter_Android_Project/app/src/main/assets/index.html
 
       - name: Set up JDK 17
